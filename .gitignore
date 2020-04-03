@@ -1,5 +1,7 @@
 data/
 useful_code/
+.DS_Store
+tmp_graph
 
 ###################### Python ###############################
 # Byte-compiled / optimized / DLL files
