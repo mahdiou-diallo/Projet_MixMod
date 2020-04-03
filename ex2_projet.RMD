@@ -145,7 +145,11 @@ print("Liste des modeles :")
 print(mfea.mixt_mod$models)
 ```
 
-
+```{r}
+mixt_mod.partitions=data.frame(cbind(c(paste(jaffe.mixt_mod$models, collapse = ", "), paste(optdigits.mixt_mod$models, collapse = ", "), paste(mfea.mixt_mod$models, collapse = ", ")), c(length(jaffe.mixt_mod$models), length(optdigits.mixt_mod$models), length(mfea.mixt_mod$models))), row.names=c("jaffe", "optdigits", "mfea"))
+colnames(mixt_mod.partitions)=c("model", "# parttions")
+print(mixt_mod.partitions)
+```
 
 2. BEST MIXTURE MODEL
 
@@ -236,6 +240,10 @@ write.csv(resultats.consensus, file = "resultats_consensus.csv")
 write.csv(resultats.custom_consensus_bic, file = "resultats.custom_consensus_bic.csv")
 write.csv(resultats.custom_consensus_log_lik, file="resultats.custom_consensus_log_lik.csv")
 write.csv(resultats.global, file="resultats_global.csv")
+write.csv(mixt_mod.partitions, file = "mixt_mod.partitions.csv")
 ```
+
+
+
 
 
