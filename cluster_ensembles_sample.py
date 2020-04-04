@@ -1,5 +1,3 @@
-import numpy as np
-import Cluster_Ensembles as CE
 from Cluster_Ensembles.Cluster_Ensembles import (
     build_hypergraph_adjacency,
     store_hypergraph_adjacency,

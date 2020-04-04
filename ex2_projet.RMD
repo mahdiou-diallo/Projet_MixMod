@@ -1,0 +1,249 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Importation des Librairies
+
+```{r}
+library(R.matlab)
+library(mclust)
+library(Rmixmod)
+library(aricode)
+require(Matrix)
+#rankMatrix(M)[1]
+```
+
+Sélection de modèle pour un nombre de classes connu
+---------------------------------------------------
+
+
+Importation des Données
+
+```{r}
+jaffe.data <- readMat("Dataset/jaffe.mat")
+
+mnist.data <- readMat("Dataset/MNIST5.mat")
+
+mfea.data <- readMat("Dataset/MFEAT1.mat")
+
+usps.data <- readMat("Dataset/USPS.mat")
+
+optdigits.data <- readMat("Dataset/Optdigits.mat")
+```
+
+
+Exploration des Données
+
+```{r}
+exploration <- function(data) {
+  counts <- table(data$y)
+  barplot(counts, main="Number of individus for each classes",
+   xlab="classes")
+  
+  nbsamples=dim(data$X)[1]
+  nbfeatures=dim(data$X)[2]
+  nbclasses=length(unique(data$y))
+  sparsity=1- sum(data$X == 0)/(dim(data$X)[1]*dim(data$X)[2])
+  balance=min(table(data$y))/max(table(data$y))
+  
+  print(paste("# samples", nbsamples))
+  print(paste("# features", nbfeatures))
+  print(paste("# classes", nbclasses))
+  print(paste("sparsity", sparsity))
+  print(paste("balance", balance))
+  
+  return(list(nbsamples=nbsamples, nbfeatures=nbfeatures, nbclasses=nbclasses, sparsity=sparsity, balance=balance))
+}
+
+```
+
+```{r}
+jaffe.exploration=exploration(jaffe.data)
+```
+```{r}
+mnist.exploraion=exploration(mnist.data)
+```
+```{r}
+mfea.exploration=exploration(mfea.data)
+```
+```{r}
+usps.exploration=exploration(usps.data)
+```
+```{r}
+optdigits.exploration=exploration(optdigits.data)
+```
+```{r}
+exploration.global=data.frame(rbind(jaffe.exploration, optdigits.exploration, mfea.exploration, usps.exploration, mnist.exploraion), row.names=c("jaffe", "optdigits", "mfea", "mnist", "usps"))
+```
+
+
+1. ALL POSSIBLE MIXTURE MODEL
+
+```{r}
+mixt_mod <- function(data) {
+  models_partition <- c()
+  loglike <- c()
+  bic <- c()
+  models<-c()
+  for(model in mclust.options("emModelNames")){
+    #cat("=======\n# ", model, "\n=======\n")
+    res_temp <- try(Mclust(data, G = 10, modelNames = model,verbose = F ))
+    if(typeof(res_temp) == "list"){
+      to_add <- res_temp$classification
+      models_partition <- cbind(models_partition, to_add)
+      loglike <- c(loglike, res_temp$loglik)
+      bic <- c(bic, res_temp$bic)
+      models <- c(models, model)
+      #print("!!! SUCESS !!!")
+    }else{
+      print(paste("!!!",model, "FAILED !!!"))
+    }
+  }
+  return(list(models_partition=models_partition, loglike=loglike, bic=bic, models=models))
+}
+    
+```
+```{r}
+
+```
+
+```{r}
+jaffe.svd=svd(jaffe.data$X)
+ind=max(which(jaffe.svd$d>1))
+D <- diag(jaffe.svd$d[1:ind])
+jaffe.mixt_mod=mixt_mod(jaffe.data$X %*% jaffe.svd$v[,1:ind])
+```
+
+```{r}
+print("Liste des modeles :")
+print(jaffe.mixt_mod$models)
+```
+
+
+```{r}
+optdigits.svd=svd(optdigits.data$X)
+ind=max(which(optdigits.svd$d>1))
+D <- diag(optdigits.svd$d[1:ind])
+optdigits.mixt_mod=mixt_mod(optdigits.data$X %*% optdigits.svd$v[,1:ind])
+```
+```{r}
+print("Liste des modeles :")
+print(optdigits.mixt_mod$models)
+```
+
+
+```{r}
+mfea.svd=svd(mfea.data$X)
+ind=max(which(mfea.svd$d>1))
+D <- diag(mfea.svd$d[1:ind])
+mfea.mixt_mod=mixt_mod(mfea.data$X %*% mfea.svd$v[,1:ind])
+```
+
+```{r}
+print("Liste des modeles :")
+print(mfea.mixt_mod$models)
+```
+
+```{r}
+mixt_mod.partitions=data.frame(cbind(c(paste(jaffe.mixt_mod$models, collapse = ", "), paste(optdigits.mixt_mod$models, collapse = ", "), paste(mfea.mixt_mod$models, collapse = ", ")), c(length(jaffe.mixt_mod$models), length(optdigits.mixt_mod$models), length(mfea.mixt_mod$models))), row.names=c("jaffe", "optdigits", "mfea"))
+colnames(mixt_mod.partitions)=c("model", "# parttions")
+print(mixt_mod.partitions)
+```
+
+2. BEST MIXTURE MODEL
+
+```{r}
+jaffe.best_mixt_mod <- Mclust(jaffe.data$X, G = 10,verbose = F )
+jaffe.best_mixt_mod.NMI=NMI(as.factor(jaffe.best_mixt_mod$classification), as.factor(jaffe.data$y))
+print(paste("NMI FOR BEST MIXTURE MODEL :", jaffe.best_mixt_mod.NMI))
+```
+```{r}
+optdigits.best_mixt_mod <- Mclust(optdigits.data$X, G = 10,verbose = F )rbinrbin
+optdigits.best_mixt_mod.NMI=NMI(as.factor(optdigits.best_mixt_mod$classification), as.factor(optdigits.data$y))
+print(paste("NMI FOR BEST MIXTURE MODEL :", optdigits.best_mixt_mod.NMI))
+```
+
+```{r}
+mfea.best_mixt_mod <- Mclust(mfea.data$X, G = 10,verbose = F )
+mfea.best_mixt_mod.NMI=NMI(as.factor(mfea.best_mixt_mod$classification), as.factor(mfea.data$y))
+print(paste("NMI FOR BEST MIXTURE MODEL :", mfea.best_mixt_mod.NMI))
+```
+
+```{r}
+resultats.best_mixt_mod=data.frame("NMI"=rbind(jaffe.best_mixt_mod.NMI, optdigits.best_mixt_mod.NMI, mfea.best_mixt_mod.NMI))
+```
+
+3. CONSENSUS OVER ALL MIXTURE MODEL
+
+```{r}
+cluster_consensus <- function(partitions, label) {
+  consensus_tmp=mixmodCluster(as.data.frame(type.convert(partitions)), nbCluster = 10, models=mixmodMultinomialModel(), dataType="qualitative")
+  NMI_tmp=NMI(as.factor(consensus_tmp@bestResult@partition), as.factor(label))
+  print(paste("NMI FOR CONSENSUS OVER ALL MIXTURE MODEL :", NMI_tmp))
+  return(list(NMI=NMI_tmp, consensus=consensus_tmp))
+}
+```
+
+```{r}
+jaffe.consensus=cluster_consensus(jaffe.mixt_mod$models_partition, jaffe.data$y)
+```
+```{r}
+optdigits.consensus=cluster_consensus(optdigits.mixt_mod$models_partition, optdigits.data$y)
+```
+
+
+```{r}
+mfea.consensus=cluster_consensus(mfea.mixt_mod$models_partition, mfea.data$y)
+```
+
+```{r}
+resultats.consensus=data.frame("NMI"=rbind(jaffe.consensus$NMI,optdigits.consensus$NMI, mfea.consensus$NMI))
+```
+
+
+4. CONSENSUS OVER BEST MIXTURE MODEL
+
+rather than doing a consensus over all the mixture model, we can do a consensus over 2 the best mixture model in terms of log likelihood score and BIC score
+
+```{r}
+jaffe.custom_consensus_log_lik=cluster_consensus(jaffe.mixt_mod$models_partition[,head(order(jaffe.mixt_mod$loglike),3)], jaffe.data$y)
+jaffe.custom_consensus_bic=cluster_consensus(jaffe.mixt_mod$models_partition[,head(order(jaffe.mixt_mod$bic),3)], jaffe.data$y)
+```
+```{r}
+optdigits.custom_consensus_log_lik=cluster_consensus(optdigits.mixt_mod$models_partition[,head(order(optdigits.mixt_mod$loglike),3)], optdigits.data$y)
+optdigits.custom_consensus_bic=cluster_consensus(optdigits.mixt_mod$models_partition[,head(order(optdigits.mixt_mod$bic),3)], optdigits.data$y)
+```
+
+
+```{r}
+mfea.custom_consensus_log_lik=cluster_consensus(mfea.mixt_mod$models_partition[,head(order(mfea.mixt_mod$loglike),2)], mfea.data$y)
+mfea.custom_consensus_bic=cluster_consensus(mfea.mixt_mod$models_partition[,head(order(mfea.mixt_mod$bic),2)], mfea.data$y)
+```
+
+```{r}
+resultats.custom_consensus_log_lik=data.frame("NMI"=rbind(jaffe.custom_consensus_log_lik$NMI,optdigits.custom_consensus_log_lik$NMI, mfea.custom_consensus_log_lik$NMI))
+resultats.custom_consensus_bic=data.frame("NMI"=rbind(jaffe.custom_consensus_bic$NMI,optdigits.custom_consensus_bic$NMI, mfea.custom_consensus_bic$NMI))
+```
+
+
+```{r}
+resultats.global=data.frame(cbind(resultats.best_mixt_mod, resultats.consensus, resultats.custom_consensus_bic, resultats.custom_consensus_log_lik), row.names=c("jaffe", "optdigits", "mfea"))
+colnames(resultats.global)=c("best", "consensus", "consensusbic", "consensusloglik")
+resultats.global
+```
+
+```{r}
+#write.csv(exploration.global, file="exploration_global.csv")
+write.csv(resultats.best_mixt_mod, file = 'resultats_best_mixt_mod.csv')
+write.csv(resultats.consensus, file = "resultats_consensus.csv")
+write.csv(resultats.custom_consensus_bic, file = "resultats.custom_consensus_bic.csv")
+write.csv(resultats.custom_consensus_log_lik, file="resultats.custom_consensus_log_lik.csv")
+write.csv(resultats.global, file="resultats_global.csv")
+write.csv(mixt_mod.partitions, file = "mixt_mod.partitions.csv")
+```
+
+
+
+
+
